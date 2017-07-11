@@ -5,6 +5,7 @@
     <description>Новый модуль админ тест</description>
     <default_language>ru</default_language>
     <status>active</status>
+    <version>2.0</version>
     <queries>
         <item for="install">
             CREATE TABLE `?:users_module_admin` (
