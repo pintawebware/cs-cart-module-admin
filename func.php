@@ -67,21 +67,21 @@ function fn_get_client_info( $client_id ) {
         $response['fio'] .= ' '. $userInfo['lastname'];
     }
 
-    $response['total'] = fn_get_total_sum_orders($client_id);
-    $response['quantity'] = fn_get_number_sales_orders($client_id);
+    $response['total'] = "".fn_get_total_sum_orders($client_id);
+    $response['quantity'] = "".fn_get_number_sales_orders($client_id);
     if ( !empty($userInfo['email']) && !is_null($userInfo['email']) ) {
         $response['email'] = $userInfo['email'];
     }
 
     if ( !empty($userInfo['phone']) && !is_null($userInfo['phone']) ) {
-        $response['phone'] = $userInfo['phone'];
+        $response['telephone'] = $userInfo['phone'];
     } else {
-        $response['phone'] = $userInfo['b_phone'];
+        $response['telephone'] = $userInfo['b_phone'];
     }
 
     $response['currency_code'] = "".fn_get_currencies_store();
-    $response['cancelled'] = fn_get_canceled_orders($client_id);
-    $response['completed'] = fn_get_completed_orders($client_id);
+    $response['cancelled'] = "".fn_get_canceled_orders($client_id);
+    $response['completed'] = "".fn_get_completed_orders($client_id);
     return $response;
 }
 
@@ -130,16 +130,22 @@ function fn_get_client_orders( $clientOrders ) {
 }
 
 function fn_get_name_order_status( $type_status ) {
-    $statusId = fn_get_simple_statuses();
-    return $statusId[$type_status];
+    if ( $type_status == 'N' ) {
+        return '';
+    } else {
+        $statusId = fn_get_simple_statuses();
+        return $statusId[$type_status];
+    }
 }
 
 function fn_get_order_history( $order_id ) {
     $order = fn_get_order_by_id( $order_id )[0];
     $statusInfo = fn_get_status_order_by_code($order['status']);
-    $arrayAnswer['orders']['name'] = $statusInfo['name'];
-    $arrayAnswer['orders']['order_status_id'] = $statusInfo['order_status_id'];
-    $arrayAnswer['orders']['date_added'] = date('Y-m-d H:m:s', $order['timestamp']);
+    $arrayOrders = [];
+    $arrayOrders['name'] = $statusInfo['name'];
+    $arrayOrders['order_status_id'] = $statusInfo['order_status_id'];
+    $arrayOrders['date_added'] = date('Y-m-d H:m:s', $order['timestamp']);
+    $arrayAnswer['orders'][] = $arrayOrders;
     $arrayAnswer['statuses'] = fn_get_status_all_order();
     return $arrayAnswer;
 }
@@ -240,37 +246,68 @@ function fn_get_clients( $data = [] ) {
                 $arrayUser[] = db_get_array("SELECT user_id, firstname, lastname FROM ?:users WHERE firstname = ?s OR lastname =?s", $value['firstname'], $value['lastname']);
             }
         }
-
         foreach (end($arrayUser) as $key => $item ) {
             $usersWithAllFields[$key]['client_id'] = $item['user_id'];
             $usersWithAllFields[$key]['fio'] = $item['firstname'] ." ". $item['lastname'];
             $usersWithAllFields[$key]['total'] = fn_get_total_sum_orders($item['user_id']);
             $usersWithAllFields[$key]['quantity'] = fn_get_number_sales_orders($item['user_id']);
         }
+        switch ( $data['sort'] ) {
+            case 'sum':
+                $usersWithAllFields = fn_sort_array_by_total($usersWithAllFields);
+                break;
+            case 'quantity':
+                $usersWithAllFields = fn_sort_array_by_quantity($usersWithAllFields);
+                break;
+            default:
+        }
+        if ( $data['limit'] > count($usersWithAllFields) ) {
+            $data['limit'] = count($usersWithAllFields);
+        }
+        $count = 0;
+        $arrayUsersPagination = [];
+        for ( $i = ( $data['page'] * $data['limit'] ) - $data['limit']; $i < ( $data['page'] * $data['limit'] ); $i++ ) {
+            $arrayUsersPagination[$count]['client_id'] = $usersWithAllFields[$i]['client_id'];
+            $arrayUsersPagination[$count]['fio'] = $usersWithAllFields[$i]['fio'];
+            $arrayUsersPagination[$count]['total'] = $usersWithAllFields[$i]['total'];
+            $arrayUsersPagination[$count]['currency_code'] = "".fn_get_currencies_store();
+            $arrayUsersPagination[$count]['quantity'] = $usersWithAllFields[$i]['quantity'];
+            $count++;
+        }
+    } else {
+        $arrayUser[] = db_get_array("SELECT user_id, firstname, lastname FROM ?:users WHERE 1");
+        $counter = 0;
+        foreach (end($arrayUser) as $key => $item ) {
+            $usersWithAllFields[$counter]['client_id'] = $item['user_id'];
+            $usersWithAllFields[$counter]['fio'] = $item['firstname'] ." ". $item['lastname'];
+            $usersWithAllFields[$counter]['total'] = fn_get_total_sum_orders($item['user_id']);
+            $usersWithAllFields[$counter]['quantity'] = fn_get_number_sales_orders($item['user_id']);
+            $counter++;
+        }
+        switch ( $data['sort'] ) {
+            case 'sum':
+                $usersWithAllFields = fn_sort_array_by_total($usersWithAllFields);
+                break;
+            case 'quantity':
+                $usersWithAllFields = fn_sort_array_by_quantity($usersWithAllFields);
+                break;
+            default:
+        }
+        if ( $data['limit'] > count($usersWithAllFields) ) {
+            $data['limit'] = count($usersWithAllFields);
+        }
+        $count = 0;
+        $arrayUsersPagination = [];
+        for ( $i = ( $data['page'] * $data['limit'] ) - $data['limit']; $i < ( $data['page'] * $data['limit'] ); $i++ ) {
+            $arrayUsersPagination[$count]['client_id'] = $usersWithAllFields[$count]['client_id'];
+            $arrayUsersPagination[$count]['fio'] = $usersWithAllFields[$count]['fio'];
+            $arrayUsersPagination[$count]['total'] = "".$usersWithAllFields[$count]['total'];
+            $arrayUsersPagination[$count]['currency_code'] = "".fn_get_currencies_store();
+            $arrayUsersPagination[$count]['quantity'] = "".$usersWithAllFields[$count]['quantity'];
+            $count++;
+        }
     }
-    switch ( $data['sort'] ) {
-        case 'sum':
-            $usersWithAllFields = fn_sort_array_by_total($usersWithAllFields);
-            break;
-        case 'quantity':
-            $usersWithAllFields = fn_sort_array_by_quantity($usersWithAllFields);
-            break;
-        default:
 
-    }
-    if ( $data['limit'] > count($usersWithAllFields) ) {
-        $data['limit'] = count($usersWithAllFields);
-    }
-    $count = 0;
-    $arrayUsersPagination = [];
-    for ( $i = ( $data['page'] * $data['limit'] ) - $data['limit']; $i < ( $data['page'] * $data['limit'] ); $i++ ) {
-        $arrayUsersPagination[$count]['client_id'] = $usersWithAllFields[$i]['client_id'];
-        $arrayUsersPagination[$count]['fio'] = $usersWithAllFields[$i]['fio'];
-        $arrayUsersPagination[$count]['total'] = $usersWithAllFields[$i]['total'];
-        $arrayUsersPagination[$count]['currency_code'] = "".fn_get_currencies_store();
-        $arrayUsersPagination[$count]['quantity'] = $usersWithAllFields[$i]['quantity'];
-        $count++;
-    }
     return $arrayUsersPagination;
 }
 
@@ -349,13 +386,14 @@ function fn_get_product_info_by( $product_id ) {
     $products = db_get_row("SELECT *  FROM ?:products WHERE product_id = ?i", $product_id);
     if ( count($products) > 0 ) {
         $arrayAnswer['product_id'] = $product_id;
-        $arrayAnswer['status'] = fn_get_status_id_by_code($products['status']);
-        $arrayAnswer['model'] = $products['product_code'];
-        $arrayAnswer['name'] = fn_get_product_name($product_id);
-        $arrayAnswer['price'] = fn_get_product_price_by_id($product_id);
-        $arrayAnswer['currency_code'] = fn_get_currencies_store();
-        $arrayAnswer['quantity'] = $products['amount'];
-        $arrayAnswer['description'] = fn_get_product_description_by_id($product_id);
+        $arrayAnswer['status_name'] = "".fn_get_status_name_by_code($products['status']);
+        $arrayAnswer['code'] = "".$products['product_code'];
+        $arrayAnswer['name'] = "".fn_get_product_name($product_id);
+        $arrayAnswer['price'] = "".fn_get_product_price_by_id($product_id);
+        $arrayAnswer['currency_code'] = "".fn_get_currencies_store();
+        $arrayAnswer['quantity'] = "".$products['amount'];
+        $arrayAnswer['categories'] = fn_get_category_name_by_product_id_all( $product_id );
+        $arrayAnswer['description'] = "".fn_get_product_description_by_id($product_id);
         $arrayAnswer['images'] = fn_get_array_images_product_by_id($product_id);
     } else {
         $arrayAnswer = '';
@@ -363,15 +401,60 @@ function fn_get_product_info_by( $product_id ) {
     return $arrayAnswer;
 }
 
+function fn_get_status_name_by_code( $status ) {
+    $statusName  = fn_get_status_id_by_code($status);
+    if ( $status == 'A' ) {
+        $statusName = 'Enabled';
+    }
+    if ( $status == 'D' ) {
+        $statusName = 'Disabled';
+    }
+    return $statusName;
+}
+
+function fn_sort_array_by_image_id( $array ) {
+    usort($array, function($a, $b){
+        return ($a['image_id'] - $b['image_id']);
+    });
+    return $array;
+}
+
 function fn_get_array_images_product_by_id( $product_id ) {
     $imagesIds = db_get_array("SELECT detailed_id, type FROM ?:images_links WHERE object_type='product' AND object_id =?i", $product_id);
     $imagesPaths = [];
     $imagesIds = fn_sort_array_by_type($imagesIds);
-    foreach ( $imagesIds as $item ) {
-        $imagesPaths[] = fn_get_image($item['detailed_id'], 'detailed')['image_path'];
+    $counter = 0;
+
+    foreach ( $imagesIds as $key => $item ) {
+        if ( $item['type'] == 'M' ) {
+            $path = fn_get_image($item['detailed_id'], 'detailed')['image_path'];
+            $imagesPaths[$counter]['image_id'] = '-1';
+            $imagesPaths[$counter]['image'] = $path;
+            $counter++;
+            unset($imagesIds[$key]);
+        }
     }
-    return $imagesPaths;
+    if ( empty($imagesPaths) || is_null($imagesPaths) ) {
+        $imagesPaths[0]['image_id'] = '-1';
+        $imagesPaths[0]['image'] = '';
+        $counter++;
+    }
+
+    foreach ( $imagesIds as $item ) {
+        $path = fn_get_image($item['detailed_id'], 'detailed')['image_path'];
+        $idImage = fn_get_image($item['detailed_id'], 'detailed')['image_id'];
+        $imagesPaths[$counter]['image_id'] = $idImage;
+        $imagesPaths[$counter]['image'] = $path;
+        $counter++;
+    }
+    if ( empty($imagesPaths) || is_null($imagesPaths) ) {
+        $imagesPaths[0]['image_id'] = '-1';
+        $imagesPaths[0]['image'] = '';
+    }
+    return fn_sort_array_by_image_id($imagesPaths);
 }
+
+
 
 function fn_get_one_images_product_by_id( $product_id ) {
     $imagesIds = db_get_fields("SELECT detailed_id FROM ?:images_links WHERE object_type='product' AND type = 'M' AND object_id =?i", $product_id);
@@ -379,7 +462,11 @@ function fn_get_one_images_product_by_id( $product_id ) {
     foreach ( $imagesIds as $item ) {
         $imagesPaths = fn_get_image($item, 'detailed')['image_path'];
     }
-    return $imagesPaths;
+    if ( empty($imagesIds) ) {
+        return '';
+    } else {
+        return $imagesPaths;
+    }
 }
 
 function fn_get_product_list( $page, $limit, $name = '' ) {
@@ -392,15 +479,55 @@ function fn_get_product_list( $page, $limit, $name = '' ) {
     if ( count($allProducts) > 0 ) {
         foreach ( $allProducts as $key => $value ) {
             $arrayResonse[$key]['product_id'] = $value['product_id'];
-            $arrayResonse[$key]['model'] = $value['product_code'];
+            $arrayResonse[$key]['code'] = $value['product_code'];
             $arrayResonse[$key]['name'] = $value['product'];
             $arrayResonse[$key]['price'] = fn_get_product_price_by_id($value['product_id']);
             $arrayResonse[$key]['currency_code'] = "".fn_get_currencies_store();
             $arrayResonse[$key]['quantity'] = $value['amount'];
-            $arrayResonse[$key]['image'] = fn_get_one_images_product_by_id($value['product_id']);
+            $arrayResonse[$key]['category'] = "".fn_get_category_name_by_product_id($value['product_id']);
+            $arrayResonse[$key]['image'] = "".fn_get_one_images_product_by_id($value['product_id']);
         }
     }
     return $arrayResonse;
+}
+
+function fn_sort_array_by_category_id( $array ) {
+    usort($array, function($a, $b){
+        return ($a['category_id'] - $b['category_id']);
+    });
+    return $array;
+}
+
+function fn_get_category_name_by_product_id_all( $productId ) {
+    $response = [];
+    $categoryIds = db_get_array("SELECT category_id FROM ?:products_categories WHERE product_id = ?i", $productId);
+    foreach ( $categoryIds as $key => $value ) {
+        $categoryList[$key] = db_get_fields("SELECT id_path FROM ?:categories WHERE category_id = ?i", $value['category_id'])[0];
+    }
+    foreach ( $categoryList  as $key => $value ) {
+        $arrayCategotyList[$key] =  explode('/', $value);
+    }
+    foreach ( $arrayCategotyList as $key => $value ) {
+        $response[$key] = fn_get_line_category_product($value);
+    }
+    return fn_sort_array_by_category_id($response);
+}
+
+function fn_get_line_category_product( $arrayCategotyList ) {
+    $responseCategory = [];
+    $array = [];
+    foreach ($arrayCategotyList as $key => $value ) {
+        $responseCategory['category_id'] = $value;
+        $array[$key] = db_get_fields("SELECT category FROM ?:category_descriptions WHERE category_id = ?i", $value)[0];
+    }
+    $responseCategory['name'] = implode(' - ', $array);
+    return $responseCategory;
+}
+
+function fn_get_category_name_by_product_id( $productId ) {
+    $categoryId = db_get_fields("SELECT category_id FROM ?:products_categories WHERE product_id = ?i", $productId);
+    $categoryName = db_get_fields("SELECT category FROM ?:category_descriptions WHERE category_id = ?i", $categoryId[0]);
+    return $categoryName[0];
 }
 
 function fn_get_total_customers( $data = [] ) {
@@ -503,7 +630,7 @@ function fn_get_orders_castom( $data = [] ) {
     if ( isset($data['filter']) ) {
         if (isset($data['filter']['order_status_id']) && !empty($data['filter']['order_status_id']) && !is_null($data['filter']['order_status_id']) && $data['filter']['order_status_id'] !== '0' ) {
             $statusCode = fn_get_status_code_by_id( $data['filter']['order_status_id'] );
-            $query .= 'WHERE status = '.$statusCode;
+            $query .= 'WHERE status = \''.$statusCode.'\'';
         } else {
             $query .= "WHERE status <> 'D'";
         }
@@ -556,7 +683,7 @@ function fn_get_orders_castom( $data = [] ) {
         $sum = $sum + $value['total'];
         $quantity++;
     }
-    $listOrders['totalsumm'] = $sum;
+    $listOrders['totalsumm'] = "".$sum;
     $listOrders['quantity'] = $quantity;
     return $listOrders;
 }
@@ -602,29 +729,133 @@ function fn_update_product_name( $productId, $name ) {
 function fn_update_product_new( $data = [] ) {
     $dataProducts = [];
     $dataDescription = [];
+    $dataCategory = [];
+
     if ( isset($data['quantity']) && !empty($data['quantity']) ) {
         $dataProducts['amount'] = $data['quantity'];
     }
-    if ( isset($data['model']) && !empty($data['model']) ) {
-        $dataProducts['product_code'] = $data['model'];
+    if ( isset($data['code']) && !empty($data['code']) ) {
+        $dataProducts['product_code'] = $data['code'];
     }
-    if ( isset($data['status']) && !empty($data['status']) ) {
-        $dataProducts['status'] = fn_get_status_id_castom($data['status']);
+    if ( isset($data['status']) && !is_null($data['status']) ) {
+        $status = false;
+        if ( $data['status'] == '0' ) $status = 'D';
+        else $status = 'A';
+        $dataProducts['status'] = $status;
     }
+
     if ( isset($data['name']) && !empty($data['name']) ) {
         $dataDescription['product'] = $data['name'];
     }
     if ( isset($data['description']) && !empty($data['description']) ) {
         $dataDescription['full_description'] = $data['description'];
     }
-    if ( isset($data['images']) && !empty($data['images']) ) {
-
+    if ( isset($data['categories']) && !empty($data['categories']) ) {
+        $dataCategory['category_id'] = $data['categories'];
     }
-    if ( !empty($dataProducts) )
-        db_query("UPDATE ?:products SET ?u WHERE product_id = ?i", $dataProducts, $data['product_id']);
-    if ( !empty($dataDescription) )
-        db_query("UPDATE ?:product_descriptions SET ?u WHERE product_id = ?i", $dataDescription, $data['product_id']);
-    return true;
+
+    if ( $data['product_id'] != '0' ) {
+        $productId = $data['product_id'];
+    } else {
+        if (!empty($dataProducts)) {
+            $dataProducts['company_id'] = Registry::get('runtime.company_id');
+            $productId = db_query("INSERT INTO ?:products ?e ", $dataProducts);
+        }
+    }
+
+    if ( isset($_FILES['image']) && !empty($_FILES['image']) ) {
+        $files = $_FILES['image'];
+        $count = 0;
+        foreach ( $files as $file ) {
+            $image =  $files['tmp_name'][$count];
+            $name = $files['name'][$count];
+            if(is_uploaded_file($image)) {
+                $width = getimagesize($image)[0];
+                $height = getimagesize($image)[1];
+                $nameImage = time().rand().$name;
+                fn_add_images_to_product($nameImage, $width, $height, $productId, 'A');
+                move_uploaded_file($image, 'images/detailed/1/' . basename($nameImage));
+            }
+            $count++;
+        }
+    }
+
+    if ( isset($data['price']) && !empty($data['price']) ) {
+        $dataPrice['price'] = $data['price'];
+    }
+    if ( $data['product_id'] != '0' ) {
+        if ( !empty($dataCategory['category_id']) ) {
+            db_query("DELETE FROM ?:products_categories WHERE product_id = ?i", $data['product_id']);
+            foreach ( $dataCategory['category_id'] as $key => $value ) {
+                $listCategories = [
+                    'product_id' => $data['product_id'],
+                    'category_id' => $value,
+                    'link_type'   => 'M',
+                    'position'   => 0
+                ];
+                $result = db_query("INSERT INTO ?:products_categories ?e ", $listCategories);
+            }
+        }
+        if ( !empty($dataProducts) ) db_query("UPDATE ?:products SET ?u WHERE product_id = ?i", $dataProducts, $data['product_id']);
+        if ( !empty($dataDescription) ) db_query("UPDATE ?:product_descriptions SET ?u WHERE product_id = ?i", $dataDescription, $data['product_id']);
+        if ( !empty($dataPrice) ) db_query("UPDATE ?:product_prices SET ?u WHERE product_id = ?i", $dataPrice, $data['product_id']);
+        $response = [];
+        $response['product_id'] = $data['product_id'];
+        $response['images']     = fn_get_array_images_product_by_id($data['product_id']);
+        return $response;
+    } else {
+        if ( !empty($dataDescription) ) {
+            $dataDescription['product_id'] = $productId;
+            $dataDescription['lang_code'] = CART_LANGUAGE;
+            db_query("INSERT INTO ?:product_descriptions ?e ", $dataDescription);
+        }
+        foreach ( $dataCategory['category_id'] as $key => $value ) {
+            $listCategories = [
+                'product_id' => $productId,
+                'category_id' => $value,
+                'link_type'   => 'M',
+                'position'   => 0
+            ];
+            $result = db_query("INSERT INTO ?:products_categories ?e ", $listCategories);
+        }
+
+        if ( !empty($dataPrice) ) {
+            $dataPrice['product_id'] = $productId;
+            $dataPrice['lower_limit'] = 1;
+            db_query("INSERT INTO  ?:product_prices ?e ", $dataPrice);
+        }
+        $response = [];
+        $response['product_id'] = $productId;
+        $imagesList = fn_get_array_images_product_by_id($productId);
+        if ( !empty($imagesList) ) {
+            $idMainImage = $imagesList[0]['image_id'];
+            $data = [
+                'type' => 'M'
+            ];
+            $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND detailed_id = ?i", $data, $productId, $idMainImage);
+        }
+        $response['images']  = $imagesList;
+        return $response;
+    }
+}
+
+function fn_add_images_to_product( $imagePath, $width, $height, $productId, $type ) {
+    $dataIm = array(
+        'image_path' => $imagePath,
+        'image_x' => $width,
+        'image_y' => $height,
+    );
+    $addImage = db_query('INSERT INTO ?:images ?e', $dataIm);
+
+    $dataNew = array(
+        'object_id' => $productId,
+        'object_type' => 'product',
+        'image_id' => 0,
+        'detailed_id' => $addImage,
+        'type' => $type,
+        'position' => 0,
+    );
+    $images = db_query('INSERT INTO ?:images_links ?e', $dataNew);
 }
 
 function fn_sort_array_by_type( $array ) {
@@ -643,4 +874,131 @@ function fn_get_status_id_by_code( $codeStatus ) {
         }
     }
     return $status;
+}
+
+function fn_module_admin_place_order(&$cart, &$auth, $action = '', $issuer_id = null, &$parent_order_id = 0) {
+//    $user_data = array(
+//        'user_id' => '852',
+//        'device_token' => '77777777',
+//        'os_type' => $cart,
+//    );
+//    $newDevice = db_query('INSERT INTO ?:users_devices_module_admin ?e', $user_data);
+    $orderId = $cart;
+    $ids = [];
+    $userDevices = db_get_array("SELECT * FROM ?:users_devices_module_admin WHERE 1");
+    foreach ( $userDevices as $device ) {
+        if (strtolower($device['os_type']) == 'ios') {
+            $ids['ios'][] = $device['device_token'];
+        } else {
+            $ids['android'][] = $device['device_token'];
+        }
+    }
+    $order = fn_get_order_by_id($orderId);
+    if ( count($order)  > 0 ) {
+        $msg = array(
+            'body'       => number_format( $order[0]['total'], 2, '.', '' ),
+            'title'      => "http://" . $_SERVER['HTTP_HOST'],
+            'vibrate'    => 1,
+            'sound'      => 1,
+            'badge'      => 1,
+            'priority'   => 'high',
+            'new_order'  => [
+                'order_id'      => $orderId,
+                'total'         => number_format( $order[0]['total'], 2, '.', '' ),
+                'currency_code' => "".fn_get_currencies_store(),
+                'site_url'      => "http://" . $_SERVER['HTTP_HOST'],
+            ],
+            'event_type' => 'new_order'
+        );
+
+        $msg_android = array(
+            'new_order'  => [
+                'order_id'      => $orderId,
+                'total'         => number_format( $order[0]['total'], 2, '.', '' ),
+                'currency_code' => "".fn_get_currencies_store(),
+                'site_url'      => "http://" . $_SERVER['HTTP_HOST'],
+            ],
+            'event_type' => 'new_order'
+        );
+
+        foreach ( $ids as $k => $mas ):
+            if ( $k == 'ios' ) {
+                $fields = array
+                (
+                    'registration_ids' => $ids[$k],
+                    'notification'     => $msg,
+                );
+            } else {
+                $fields = array
+                (
+                    'registration_ids' => $ids[$k],
+                    'data'             => $msg_android
+                );
+            }
+            fn_sendCurl( $fields );
+         endforeach;
+    }
+}
+
+function fn_sendCurl($fields)
+{
+    $API_ACCESS_KEY = 'AAAAlhKCZ7w:APA91bFe6-ynbVuP4ll3XBkdjar_qlW5uSwkT5olDc02HlcsEzCyGCIfqxS9JMPj7QeKPxHXAtgjTY89Pv1vlu7sgtNSWzAFdStA22Ph5uRKIjSLs5z98Y-Z2TCBN3gl2RLPDURtcepk';
+    $headers = array
+    (
+        'Authorization: key=' . $API_ACCESS_KEY,
+        'Content-Type: application/json'
+    );
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+function fn_get_category_list( $categoryId ) {
+    $response = [];
+    $categoryList = db_get_array("SELECT category_id, level FROM ?:categories WHERE parent_id = ?i", $categoryId);
+    if ( count($categoryList) > 0 ) {
+        foreach ( $categoryList as $key => $value ) {
+            $response[$key]['category_id'] = $value['category_id'];
+            $response[$key]['name'] = fn_get_category_name_by_id($value['category_id']);
+            if ( $value['level'] <= 2 ) $response[$key]['parent'] = true;
+            else $response[$key]['parent'] = false;
+        }
+        return $response;
+    } else {
+        $categoryList = db_get_array("SELECT category_id, level FROM ?:categories WHERE category_id = ?i", $categoryId);
+        foreach ( $categoryList as $key => $value ) {
+            $response[$key]['category_id'] = $value['category_id'];
+            $response[$key]['name'] = fn_get_category_name_by_id($value['category_id']);
+            if ( $value['level'] <= 2 ) $response[$key]['parent'] = true;
+            else $response[$key]['parent'] = false;
+        }
+        return $response;
+    }
+}
+
+function fn_get_category_list_root() {
+    $categoryList = db_get_array("SELECT category_id FROM ?:categories WHERE parent_id = 0");
+    if ( count($categoryList) > 0 ) {
+        foreach ( $categoryList as $key => $value ) {
+            $response[$key]['category_id'] = $value['category_id'];
+            $response[$key]['name'] = fn_get_category_name_by_id($value['category_id']);
+            if ( $value['level'] <= 2 ) $response[$key]['parent'] = true;
+            else $response[$key]['parent'] = false;
+        }
+        return $response;
+    } else {
+        return null;
+    }
+}
+
+function fn_get_category_name_by_id( $categoryId ) {
+    $name = db_get_fields("SELECT category FROM ?:category_descriptions WHERE category_id = ?i", $categoryId);
+    return $name[0];
 }

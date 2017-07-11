@@ -12,6 +12,7 @@ if (!defined('BOOTSTRAP')) { die('Access denied'); }
 // apidoc -i app/addons/module_admin/controllers/frontend/ -o apidoc/
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $API_VERSION = 1.0;
+    $API_VERSION_SECOND = 2.0;
 
     /**
      * @api {post} login  Login
@@ -74,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         $token = fn_get_user_token($user_id);
-        fn_answer( ['version' => $API_VERSION, 'response' => ['token' => $token], 'status' => true] );
+        fn_answer( ['version' => $API_VERSION, 'response' => ['token' => implode($token)], 'status' => true] );
     }
 
     /**
@@ -304,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ( isset($response['order_id']) && !empty($response['order_id']) ) {
             $orderId = $response['order_id'];
             $orderHistory = fn_get_order_history($orderId);
-            fn_answer(['version' => $API_VERSION, 'response' => $orderHistory, 'status' => false]);
+            fn_answer(['version' => $API_VERSION, 'response' => $orderHistory, 'status' => true]);
         } else {
             fn_answer(['version' => $API_VERSION, 'error' => 'You have not specified ID', 'status' => false]);
         }
@@ -565,10 +566,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      */
     if ( $mode == 'getclients' ) {
         $response = $_REQUEST;
-        $error = fn_check_token();
-        if ($error !== null) {
-            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
-        }
+//        $error = fn_check_token();
+//        if ($error !== null) {
+//            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
+//        }
         if (isset($response['page']) && (int)$response['page'] != 0 && (int)$response['limit'] != 0 && isset($response['limit'])) {
             $page = $response['page'];
             $limit = $response['limit'];
@@ -682,7 +683,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     /**
      * @api {post} productinfo  Get Product Info
-     * @apiVersion 1.0.0
+     * @apiVersion 2.0.0
      * @apiName productinfo
      * @apiGroup Get product info
      *
@@ -692,11 +693,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      * @apiSuccess {Number} version  Current API version.
      * @apiSuccess {Number} product_id  ID of the product.
      * @apiSuccess {String} name  Name of the product.
+     * @apiSuccess {String} status  Product Status.
      * @apiSuccess {String} model    Model of the product.
      * @apiSuccess {Number} price  Price of the product.
      * @apiSuccess {String} currency_code  Default currency of the shop.
      * @apiSuccess {Number} quantity  Actual quantity of the product.
-     * @apiSuccess {String} description     Detail description of the product.
+     * @apiSuccess {String} description  Detail description of the product.
+     * @apiSuccess {String} categoryName  Category name of the product.
      * @apiSuccess {Array} images  Array of the images of the product.
      *
      * @apiSuccessExample Success-Response:
@@ -705,26 +708,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      *   "Response":
      *   {
      *       "product_id" : "392",
+     *       "status": "Вкл.",
      *       "name" : "Madison LX2200",
      *       "model": "P0222KUH4T",
      *       "price" : "425.00",
      *       "currency_code": "UAH"
      *       "quantity" : "2",
+     *       "categoryName" : "Настольные ПК"
      *       "description" : "10x Optical Zoom with 24mm Wide-angle and close up.10.7-megapixel backside illuminated CMOS sensor for low light shooting.  3" Multi-angle LCD. SD/SDXC slot. Full HD Video. High speed continuous shooting (up to 5 shots in approx one second) Built in GPS. Easy Panorama. Rechargable Li-ion battery. File formats: Still-JPEG, Audio- WAV, Movies-MOV. Image size: up to 4600x3400. Built in flash. 3.5" x 5" x 4". 20oz.",
      *       "images" :
      *       [
-     *           "http://magento_site_url/media/catalog/product/cache/1/thumbnail/200x200/9df78eab33525d08d6e5fb8d27136e95/h/d/hde001a.jpg",
-     *           "http://magento_site_url/media/catalog/product/cache/1/thumbnail/200x200/9df78eab33525d08d6e5fb8d27136e95/h/d/hde001b.jpg",
-     *           "http://magento_site_url/media/catalog/product/cache/1/thumbnail/200x200/9df78eab33525d08d6e5fb8d27136e95/h/d/hde001t_2.jpg"
+     *           [
+     *              "image_id": "1430",
+     *              "image" : "http://magento_site_url/media/catalog/product/cache/1/thumbnail/200x200/9df78eab33525d08d6e5fb8d27136e95/h/d/hde001a.jpg",
+     *           ]
      *       ]
      *   },
      *   "Status" : true,
-     *   "version": 1.0
+     *   "version": 2.0
      * }
      * @apiErrorExample Error-Response:
      * {
      *      "Error" : "Can not found product with id = 10",
-     *      "version": 1.0,
+     *      "version": 2.0,
      *      "Status" : false
      * }
      *
@@ -734,24 +740,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $response = $_REQUEST;
         $error = fn_check_token();
         if ($error !== null) {
-            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
         }
         if ( isset($response['product_id']) && !empty($response['product_id']) ) {
             $product_id = $response['product_id'];
             $productItems = fn_get_product_info_by( $product_id );
             if ( $productItems !== '' ) {
-                fn_answer(['version' => $API_VERSION, 'response' => $productItems, 'status' => true]);
+                fn_answer(['version' => $API_VERSION_SECOND, 'response' => $productItems, 'status' => true]);
             } else {
-                fn_answer(['version' => $API_VERSION, 'error' => 'Can not found order with id = '.$product_id, 'status' => false]);
+                fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'Can not found order with id = '.$product_id, 'status' => false]);
             }
         } else {
-            fn_answer(['version' => $API_VERSION, 'error' => 'You have not specified ID', 'status' => false]);
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'You have not specified ID', 'status' => false]);
         }
     }
 
     /**
      * @api {post} productslist  Get Products List
-     * @apiVersion 1.0.0
+     * @apiVersion 2.0.0
      * @apiName productslist
      * @apiGroup Get product info
      *
@@ -767,6 +773,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      * @apiSuccess {String} currency_code  Default currency of the shop.
      * @apiSuccess {Number} price  Price of the product.
      * @apiSuccess {Number} quantity  Actual quantity of the product.
+     * @apiSuccess {String} categoryName  Category name.
      * @apiSuccess {Url} image  Url to the product image.
      *
      *
@@ -784,6 +791,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      *             "price" : "100.00",
      *             "currency_code": "UAH",
      *             "quantity" : "83",
+     *             "categoryName": "LED телевизоры",
      *             "image" : "http://site-url/image/catalog/demo/htc_touch_hd_1.jpg"
      *           },
      *           {
@@ -793,17 +801,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      *             "price" : "300.00",
      *             "currency_code": "UAH",
      *             "quantity" : "30",
+     *             "categoryName": "LED телевизоры",
      *             "image" : "http://site-url/image/catalog/demo/iphone_1.jpg"
      *           }
      *      }
      *   },
      *   "Status" : true,
-     *   "version": 1.0
+     *   "version": 2.0
      * }
      * @apiErrorExample Error-Response:
      * {
      *      "Error" : "Not one product not found",
-     *      "version": 1.0,
+     *      "version": 2.0,
      *      "Status" : false
      * }
      *
@@ -813,7 +822,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $response = $_REQUEST;
         $error = fn_check_token();
         if ($error !== null) {
-            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
         }
         if (isset($response['page']) && (int)$response['page'] != 0 && (int)$response['limit'] != 0 && isset($response['limit'])) {
             $page = $response['page'] = ($response['page'] * $response['limit']) - $response['limit'];
@@ -828,7 +837,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $name = '';
         }
         $productList['products'] = fn_get_product_list( $page, $limit, $name );
-        fn_answer(['version' => $API_VERSION, 'response' => $productList, 'status' => true]);
+        fn_answer(['version' => $API_VERSION_SECOND, 'response' => $productList, 'status' => true]);
     }
 
     /**
@@ -1007,8 +1016,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $data['xAxis'] = $hours;
                 $data['clients'] = $clients_for_time;
                 $data['orders'] = $orders_for_time;
-                $data['total_sales'] = get_total_sales();
-                $data['sale_year_total'] = get_total_sales(['this_year' => true]);
+                $data['total_sales'] = "".get_total_sales();
+                $data['sale_year_total'] = "".get_total_sales(['this_year' => true]);
                 $data['orders_total'] = fn_get_total_orders();
                 $data['clients_total'] = fn_get_total_customers();
                 $data['currency_code'] = "".fn_get_currencies_store();
@@ -1098,7 +1107,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $data['order_number'] = $orders['order_id'];
                 $data['fio'] = $orders['b_firstname']. " " . $orders['b_lastname'];
                 $data['email'] = $orders['email'];
-                $data['phone'] = $orders['phone'];
+                $data['telephone'] = $orders['phone'];
                 $data['total'] = $orders['total'];
                 $data['currency_code'] = "".fn_get_currencies_store();
                 $data['date_added'] = date("Y-m-d H:m:s", $orders['timestamp']);
@@ -1255,7 +1264,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $data['order_id'] = $order['order_id'];
                 $data['fio'] = $order['b_firstname'] . ' ' . $order['b_lastname'];
                 $data['status'] = fn_get_name_order_status($order['status']);
-                $data['total'] = $order['total'];
+                $data['total'] = "".$order['total'];
                 $data['date_added'] = date('Y-m-d H:m:s', $order['timestamp']);
                 $data['currency_code'] = "".fn_get_currencies_store();
                 $orders_to_response[] = $data;
@@ -1327,48 +1336,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     /**
-     * @api {post} setquantity  Set Quantity
-     * @apiVersion 1.0.0
-     * @apiName setquantity
-     * @apiGroup Set Product
-     *
-     * @apiParam {Token} token your unique token.
-     * @apiParam {Number} product_id unique product ID.
-     * @apiParam {Number} quantity new product quantity.
-     *
-     * @apiSuccess {Number} version  Current API version.
-     * @apiSuccess {Boolean} status  true.
-     * @apiSuccessExample Success-Response:
-     *     HTTP/1.1 200 OK
-     * {
-     *   "Status" : true,
-     *   "version": 1.0
-     * }
-     * @apiErrorExample Error-Response:
-     * {
-     *      "Error" : "Missing some params",
-     *      "version": 1.0,
-     *      "Status" : false
-     * }
-     *
-     *
-     */
-    if ( $mode == 'setquantity' ) {
-        $response = $_REQUEST;
-        $error = fn_check_token();
-        if ($error !== null) {
-            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
-        }
-        if ( isset($response['product_id']) && !empty($response['product_id']) && isset($response['quantity']) && !empty($response['quantity']) ) {
-            if ( fn_set_quantity_for_product($response['product_id'], $response['quantity']) ) {
-                fn_answer(['version' => $API_VERSION, 'status' => true]);
-            } else fn_answer(['version' => $API_VERSION, 'error' => 'Can not found product with id = ' . $response['product_id'],'status' => false]);
-        } else fn_answer(['version' => $API_VERSION, 'error' => 'You have not specified ID', 'status' => false]);
-    }
-
-    /**
      * @api {post} updateproduct  Update Product
-     * @apiVersion 1.0.0
+     * @apiVersion 2.0.0
      * @apiName updateproduct
      * @apiGroup Set Product
      *
@@ -1388,29 +1357,201 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      *     HTTP/1.1 200 OK
      *   {
      *       "status": true,
-     *       "version": 1.0
+     *       "version": 2.0
      *   }
      *
      * @apiErrorExample Error-Response:
      *
      *     {
      *       "error" : "Missing some params",
-     *       "version": 1.0,
+     *       "version": 2.0,
      *       "Status" : false
      *     }
      *
      */
     if ( $mode == 'updateproduct' ) {
         $response = $_REQUEST;
+        if ( isset($response['description']) && !empty($response['description'])) {
+            $response['description'] = $_POST['description'];
+        }
+
         $error = fn_check_token();
         if ($error !== null) {
-            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
         }
-        if ( isset($response['product_id']) && !empty($response['product_id']) ) {
-            if ( fn_update_product_new($response) ) {
-                fn_answer(['version' => $API_VERSION, 'status' => true]);
-            } else fn_answer(['version' => $API_VERSION, 'error' => 'Error updating', 'status' => false]);
-        } else fn_answer(['version' => $API_VERSION, 'error' => 'You have not specified ID', 'status' => false]);
+        if ( isset($response['product_id']) ) {
+            fn_answer(['version' => $API_VERSION_SECOND, 'response' => fn_update_product_new($response), 'status' => true]);
+        } else fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'You have not specified ID', 'status' => false]);
+    }
+
+    /**
+     * @api {post} getcategories  Get Categories
+     * @apiVersion 2.0.0
+     * @apiName getcategories
+     * @apiGroup Category
+     *
+     * @apiParam {Token} token your unique token.
+     *
+     * @apiParam {array} Category list.
+     * @apiSuccess {Number} version  Current API version.
+     * @apiSuccess {Boolean} status  true.
+     *
+     *  HTTP/1.1 200 OK
+     *   {
+     *          "response":
+     *                  {
+     *                       "id": "165",
+     *                       "name": "Планшеты",
+     *                       "parent": false
+     *                       },
+     *                   {
+     *                       "id": "166",
+     *                       "name": "Электроника",
+     *                       "parent": true
+     *                   },
+     *          "status": true,
+     *          "version": 2.0
+     *   }
+     *
+     * @apiErrorExample Error-Response:
+     *
+     *     {
+     *       "error" : "Category list is empty",
+     *       "version": 2.0,
+     *       "Status" : false
+     *     }
+     *
+     */
+    if ( $mode == 'getcategories' ) {
+        $response = $_REQUEST;
+        $error = fn_check_token();
+        if ($error !== null) {
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
+        }
+        $list = [];
+        if ( $response['category_id'] == '-1' ) {
+            $list = fn_get_category_list_root();
+        } else {
+            $list = fn_get_category_list($response['category_id']);
+        }
+        $responseNew['categories'] = $list;
+        if ( !is_null($responseNew['categories']) ) {
+            fn_answer(['version' => $API_VERSION_SECOND, 'response' => $responseNew, 'status' => true]);
+        } else {
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'Category list is empty', 'status' => false]);
+        }
+    }
+
+    /**
+     * @api {post} mainimage  Set main image
+     * @apiVersion 2.0.0
+     * @apiName mainimage
+     * @apiGroup Image
+     *
+     * @apiParam {string} token your unique token.
+     * @apiParam {number} image_id Image id.
+     * @apiParam {number} product_id Product id.
+     *
+     * @apiSuccess {Number} version  Current API version.
+     * @apiSuccess {Boolean} status  true.
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *   {
+     *       "status": true,
+     *       "version": 2.0
+     *   }
+     *
+     * @apiErrorExample Error-Response:
+     *
+     *     {
+     *       "error" : "Not enough parameters",
+     *       "version": 2.0,
+     *       "Status" : false
+     *     }
+     *
+     */
+    if ( $mode == 'mainimage' ) {
+        $response = $_REQUEST;
+        $error = fn_check_token();
+        if ($error !== null) {
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
+        }
+        if ( isset($response['image_id']) && !empty($response['image_id']) &&
+            isset($response['product_id']) && !empty($response['product_id']) ) {
+            $data = [
+                'type' => 'A'
+            ];
+            $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND type = 'M'", $data, $response['product_id']);
+            $data = [
+                'type' => 'M'
+            ];
+            $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND detailed_id = ?i", $data, $response['product_id'], $response['image_id']);
+            fn_answer(['version' => $API_VERSION_SECOND, 'status' => true]);
+        } else {
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'Not enough parameters', 'status' => false]);
+        }
+
+    }
+
+    /**
+     * @api {post} deleteimage  Delete main image
+     * @apiVersion 2.0.0
+     * @apiName deleteimage
+     * @apiGroup Image
+     *
+     * @apiParam {string} token your unique token.
+     * @apiParam {number} image_id Image id.
+     * @apiParam {number} product_id Product id.
+     *
+     * @apiSuccess {Number} version  Current API version.
+     * @apiSuccess {Boolean} status  true.
+     *
+     * @apiSuccessExample Success-Response:
+     *     HTTP/1.1 200 OK
+     *   {
+     *       "status": true,
+     *       "version": 2.0
+     *   }
+     *
+     * @apiErrorExample Error-Response:
+     *
+     *     {
+     *       "error" : "Not enough parameters",
+     *       "version": 2.0,
+     *       "Status" : false
+     *     }
+     *
+     */
+    if ( $mode == 'deleteimage' ) {
+        $response = $_REQUEST;
+        $error = fn_check_token();
+        if ($error !== null) {
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
+        }
+        if ( isset($response['image_id']) && !empty($response['image_id']) &&
+            isset($response['product_id']) && !empty($response['product_id']) ) {
+            if ( $response['image_id'] == '-1' ) {
+                $imageId = db_get_field("SELECT detailed_id FROM ?:images_links WHERE object_id = ?i AND type = 'M'", $response['product_id']);
+                $delete = db_query("DELETE FROM ?:images_links WHERE object_id = ?i AND type = 'M'", $response['product_id']);
+                $imagePath = db_get_field("SELECT image_path FROM ?:images WHERE image_id = ?i", $imageId);
+                $answer['product_id'] = $response['product_id'];
+                $answer['images'] = fn_get_array_images_product_by_id($response['product_id']);
+                unlink('images/detailed/1/'.$imagePath);
+            } else {
+                $delete = db_query("DELETE FROM ?:images_links WHERE object_id = ?i AND detailed_id = ?i", $response['product_id'], $response['image_id']);
+                $imagePath = db_get_field("SELECT image_path FROM ?:images WHERE image_id = ?i", $response['image_id']);
+                $mainImage = db_query("DELETE FROM ?:images WHERE image_id = ?i", $response['image_id']);
+                unlink('images/detailed/1/'.$imagePath);
+                $answer['product_id'] = $response['product_id'];
+                $answer['images'] = fn_get_array_images_product_by_id($response['product_id']);
+            }
+
+            fn_answer(['version' => $API_VERSION_SECOND, 'response' => $answer, 'status' => true]);
+        } else {
+            fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'Not enough parameters', 'status' => false]);
+        }
+
     }
 }
 
@@ -1424,8 +1565,9 @@ function fn_check_token()
             foreach ($tokens as $token) {
                 if ($_REQUEST['token'] == $token['token']) {
                     $error = null;
+                    break;
                 } else {
-                    $error = 'Your token is no longer relevant!';
+                    $error = 'Token does not exist';
                 }
             }
         } else {
