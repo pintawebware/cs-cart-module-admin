@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             fn_log_event('users', 'failed_login', array (
                 'user' => $response['username']
             ));
-            fn_answer(['error' => 'Incorrect username or password', 'version' => 1.0, 'Status' => false]);
+            fn_answer(['error' => 'Incorrect username or password', 'version' => 1.0, 'status' => false]);
         }
         $user_id = fn_is_user_exists(0, array('email' => $response['username']));
         $userDevices = fn_get_users_devices( $user_id );
