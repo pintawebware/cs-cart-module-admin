@@ -13,7 +13,6 @@ if (!defined('BOOTSTRAP')) { die('Access denied'); }
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $API_VERSION = 2.0;
     $API_VERSION_SECOND = 2.0;
-
     /**
      * @api {post} login  Login
      * @apiVersion 1.0.0
@@ -215,10 +214,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY timestamp DESC", $client_id);
                         break;
                     case 'completed'  :
-                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i AND status = ?s", $client_id, 'C');
+                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY FIELD(status,'c') DESC", $client_id);
                         break;
                     case 'cancelled'  :
-                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i AND status = ?s", $client_id, 'D');
+                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY FIELD(status,'d') DESC", $client_id, 'D');
                         break;
                     default :
                         $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY timestamp DESC", $client_id);
@@ -1257,9 +1256,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $response = [];
         $orders_to_response = [];
-//        fn_answer($orders);
+
         foreach ($orders as $order) {
-            if ($order['order_id'] !== null) {
+
+            if ($order['order_id'] !== null && isset($order['order_id'])) {
                 $data['order_number'] = $order['order_id'];
                 $data['order_id'] = $order['order_id'];
                 $data['fio'] = $order['b_firstname'] . ' ' . $order['b_lastname'];
@@ -1272,13 +1272,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         $response['orders'] = $orders_to_response;
+
         $response['total_quantity'] = $orders['quantity'];
         $response['currency_code'] = "".fn_get_currencies_store();
         $response['total_sum'] = $orders['totalsumm'];
 
         $response['max_price'] = fn_get_max_order_price();
         $response['statuses'] = fn_get_status_all_order();
-        fn_answer(['version' => $API_VERSION, 'response' => $response, 'status' => true]);
+
+        if ( empty($response['orders']) ) {
+            $response['orders'] = [];
+            fn_answer(['version' => $API_VERSION, 'response' => $response, 'status' => true]);
+        } else {
+            fn_answer(['version' => $API_VERSION, 'response' => $response, 'status' => true]);
+        }
+
     }
 
     /**
