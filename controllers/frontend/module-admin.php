@@ -11,7 +11,7 @@ if (!defined('BOOTSTRAP')) { die('Access denied'); }
 // https://www.cs-cart.ru/docs/4.2.x/developer/instruments/database/placeholders.html#w-where
 // apidoc -i app/addons/module_admin/controllers/frontend/ -o apidoc/
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $API_VERSION = 1.0;
+    $API_VERSION = 2.0;
     $API_VERSION_SECOND = 2.0;
 
     /**
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             fn_log_event('users', 'failed_login', array (
                 'user' => $response['username']
             ));
-            fn_answer(['error' => 'Incorrect username or password', 'version' => 1.0, 'status' => false]);
+            fn_answer(['error' => 'Incorrect username or password', 'version' => $API_VERSION, 'status' => false]);
         }
         $user_id = fn_is_user_exists(0, array('email' => $response['username']));
         $userDevices = fn_get_users_devices( $user_id );
