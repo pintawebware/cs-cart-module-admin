@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <addon scheme="3.0">
-    <id>module_admin</id>
+    <id>module-admin</id>
     <name>CS-CART MODULE ADMIN</name>
-    <description>Новый модуль админ тест</description>
+    <description>CS-CART MODULE ADMIN</description>
     <default_language>ru</default_language>
     <status>active</status>
     <version>2.0</version>
