@@ -73,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 fn_set_user_device($user_id, $response['device_token'], $response['os_type'] );
             }
         }
-        $token = fn_get_user_token($user_id);
-        fn_answer( ['version' => $API_VERSION, 'response' => ['token' => implode($token)], 'status' => true] );
+        $token = fn_get_user_token($user_id)[0];
+        fn_answer( ['version' => $API_VERSION, 'response' => ['token' => $token], 'status' => true] );
     }
 
     /**
@@ -565,10 +565,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      */
     if ( $mode == 'getclients' ) {
         $response = $_REQUEST;
-//        $error = fn_check_token();
-//        if ($error !== null) {
-//            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
-//        }
+        $error = fn_check_token();
+        if ($error !== null) {
+           fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
+        }
         if (isset($response['page']) && (int)$response['page'] != 0 && (int)$response['limit'] != 0 && isset($response['limit'])) {
             $page = $response['page'];
             $limit = $response['limit'];
