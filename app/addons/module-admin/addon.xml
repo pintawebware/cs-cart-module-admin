@@ -6,6 +6,21 @@
     <default_language>ru</default_language>
     <status>active</status>
     <version>2.0</version>
+    <settings edition_type="ROOT,ULT:VENDOR">
+        <sections>
+            <section id="general">
+                <items>
+
+                    <item id="is_multivendor">
+                        <type>checkbox</type>
+                        <default_value>N</default_value>
+                        <variants/>
+                    </item>
+
+                </items>
+            </section>
+        </sections>
+    </settings>
     <queries>
         <item for="install">
             CREATE TABLE `?:users_module_admin` (

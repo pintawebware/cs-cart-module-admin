@@ -56,7 +56,23 @@ function fn_get_all_tokens ( ) {
 }
 
 function fn_get_client_info( $client_id ) {
-    $userInfo = fn_get_user_info( $client_id );
+    $response = [];
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
+        $company = fn_get_company_id_user_type_by_token( $userId );
+
+        if ( $company['company_id'] == '0' && $company['user_type'] == 'A' ) {
+            $userInfo = fn_get_user_info( $client_id );
+        } else {
+            $userInfo = fn_get_user_info( $client_id );
+            $orderCompanyId = db_get_field("SELECT company_id FROM ?:orders WHERE user_id = ?i and company_id = ?i", $client_id, $company['company_id']);
+            if ( empty($orderCompanyId) ) {
+                return [];
+            }
+        }
+    } else {
+        $userInfo = fn_get_user_info( $client_id );
+    }
     $response['client_id'] = $userInfo['user_id'];
     $response['fio'] = $userInfo['firstname'];
     if ( !empty($userInfo['firstname']) && !is_null($userInfo['firstname']) ) {
@@ -82,6 +98,7 @@ function fn_get_client_info( $client_id ) {
     $response['currency_code'] = "".fn_get_currencies_store();
     $response['cancelled'] = "".fn_get_canceled_orders($client_id);
     $response['completed'] = "".fn_get_completed_orders($client_id);
+
     return $response;
 }
 
@@ -138,10 +155,32 @@ function fn_get_name_order_status( $type_status ) {
     }
 }
 
-function fn_get_order_history( $order_id ) {
-    $order = fn_get_order_by_id( $order_id )[0];
-    $statusInfo = fn_get_status_order_by_code($order['status']);
+function fn_get_order_history( $order_id ){
+    $order = [];
+    if (Registry::get('addons.module-admin.is_multivendor') == 'Y') {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ($company['user_type'] == 'A' && $company['company_id'] == '0') {
+            $order = db_get_array("SELECT * FROM ?:orders WHERE order_id = ?i", $order_id)[0];
+        } else {
+            $order = db_get_array("SELECT * FROM ?:orders WHERE order_id = ?i and company_id = ?i", $order_id, $company['company_id'])[0];
+        }
+        $statusInfo = fn_get_status_order_by_code($order['status']);
+    } else {
+        $order = fn_get_order_by_id($order_id)[0];
+        $statusInfo = fn_get_status_order_by_code($order['status']);
+    }
+
+    return get_fields_for_order_history( $order, $statusInfo );
+}
+
+function get_fields_for_order_history( $order, $statusInfo ) {
     $arrayOrders = [];
+    if ( is_null($order) ) {
+        $arrayAnswer['orders'][] = [];
+        $arrayAnswer['statuses'] = fn_get_status_all_order();
+        return $arrayAnswer;
+    }
     $arrayOrders['name'] = $statusInfo['name'];
     $arrayOrders['order_status_id'] = $statusInfo['order_status_id'];
     $arrayOrders['date_added'] = date('Y-m-d H:m:s', $order['timestamp']);
@@ -174,7 +213,16 @@ function fn_update_user_device_token( $old_token, $new_token ) {
 }
 
 function fn_get_payment_and_shipping_by_id( $order_id ) {
-    $order = end(db_get_array("SELECT shipping_ids, payment_id, b_address, b_city, b_state, b_country  FROM ?:orders WHERE order_id = ?i", $order_id));
+
+    $query = "SELECT shipping_ids, payment_id, b_address, b_city, b_state, b_country  FROM ?:orders WHERE order_id = ?i";
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $query .= " and company_id = ".  $company['company_id'];
+        }
+    }
+    $order = end(db_get_array( $query , $order_id));
     $data = [];
     if ( $order !== false ) {
         $data['error'] = null;
@@ -203,7 +251,15 @@ function fn_get_shipping_method_by_id( $shippingId ) {
 }
 
 function fn_get_order_by_id( $order_id ) {
-    $order = db_get_array("SELECT * FROM ?:orders WHERE order_id = ?i", $order_id);
+    $query = "SELECT * FROM ?:orders WHERE order_id = ?i";
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $query .= " and company_id = ". $company['company_id'];
+        }
+    }
+    $order = db_get_array( $query , $order_id);
     return $order;
 }
 
@@ -212,7 +268,16 @@ function fn_set_new_address_for_order_by_id( $order_id, $newAddress ) {
         'b_address' => $newAddress,
         's_address' => $newAddress
     ];
-    db_query("UPDATE ?:orders SET ?u WHERE order_id = ?i", $data, $order_id);
+    $query = "UPDATE ?:orders SET ?u WHERE order_id = ?i";
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $query .= " and company_id = ".  $company['company_id'];
+        }
+    }
+
+    return (bool)db_query( $query , $data, $order_id);
 }
 
 function fn_set_new_city_for_order_by_id( $order_id, $newCity ) {
@@ -220,7 +285,15 @@ function fn_set_new_city_for_order_by_id( $order_id, $newCity ) {
         'b_city' => $newCity,
         's_city' => $newCity
     ];
-    db_query("UPDATE ?:orders SET ?u WHERE order_id = ?i", $data, $order_id);
+    $query = "UPDATE ?:orders SET ?u WHERE order_id = ?i";
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $query .= " and company_id = ".  $company['company_id'];
+        }
+    }
+    return (bool)db_query( $query , $data, $order_id);
 }
 
 function fn_get_clients( $data = [] ) {
@@ -237,21 +310,37 @@ function fn_get_clients( $data = [] ) {
                 $allParams[$key]['lastname'] = $value;
             }
         }
+
+        $query = "SELECT user_id, firstname, lastname FROM ?:users WHERE  ";
+        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+            $userId = fn_get_user_id_by_token($_REQUEST['token']);
+            $company = fn_get_company_id_user_type_by_token($userId);
+            if ( $company['user_type'] != 'A' ) {
+                $getIdUsers = db_get_fields( "SELECT DISTINCT(user_id) FROM ?:orders WHERE company_id = ?i", $company['company_id'] );
+                $query .= " user_id in (".implode(',', $getIdUsers).") and (firstname = ?s OR lastname =?s)";
+            } else $query .= "firstname = ?s OR lastname = ?s";
+        } else {
+            $query .= "firstname = ?s OR lastname = ?s";
+        }
         if ( $data['sort'] == 'date_added' ) {
+            $query .= " ORDER BY timestamp DESC";
             foreach ($allParams as $key => $value ) {
-                $arrayUser[] = db_get_array("SELECT user_id, firstname, lastname FROM ?:users WHERE firstname = ?s OR lastname =?s ORDER BY timestamp DESC", $value['firstname'], $value['lastname']);
+                $arrayUser[] = db_get_array( $query , $value['firstname'], $value['lastname']);
             }
         } else {
+
             foreach ($allParams as $key => $value ) {
-                $arrayUser[] = db_get_array("SELECT user_id, firstname, lastname FROM ?:users WHERE firstname = ?s OR lastname =?s", $value['firstname'], $value['lastname']);
+                $arrayUser[] = db_get_array($query, $value['firstname'], $value['lastname']);
             }
         }
+
         foreach (end($arrayUser) as $key => $item ) {
             $usersWithAllFields[$key]['client_id'] = $item['user_id'];
             $usersWithAllFields[$key]['fio'] = $item['firstname'] ." ". $item['lastname'];
             $usersWithAllFields[$key]['total'] = fn_get_total_sum_orders($item['user_id']);
             $usersWithAllFields[$key]['quantity'] = fn_get_number_sales_orders($item['user_id']);
         }
+
         switch ( $data['sort'] ) {
             case 'sum':
                 $usersWithAllFields = fn_sort_array_by_total($usersWithAllFields);
@@ -261,6 +350,7 @@ function fn_get_clients( $data = [] ) {
                 break;
             default:
         }
+
         if ( $data['limit'] > count($usersWithAllFields) ) {
             $data['limit'] = count($usersWithAllFields);
         }
@@ -274,8 +364,18 @@ function fn_get_clients( $data = [] ) {
             $arrayUsersPagination[$count]['quantity'] = $usersWithAllFields[$i]['quantity'];
             $count++;
         }
+
     } else {
-        $arrayUser[] = db_get_array("SELECT user_id, firstname, lastname FROM ?:users WHERE 1");
+        $query = "SELECT user_id, firstname, lastname FROM ?:users";
+        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+            $userId = fn_get_user_id_by_token($_REQUEST['token']);
+            $company = fn_get_company_id_user_type_by_token($userId);
+            if ( $company['user_type'] != 'A' ) {
+                $getIdUsers = db_get_fields( "SELECT DISTINCT(user_id) FROM ?:orders WHERE company_id = ?i", $company['company_id'] );
+                $query .= " WHERE user_id in (".implode(',', $getIdUsers).")";
+            }
+        }
+        $arrayUser[] = db_get_array( $query );
         $counter = 0;
         foreach (end($arrayUser) as $key => $item ) {
             $usersWithAllFields[$counter]['client_id'] = $item['user_id'];
@@ -336,7 +436,21 @@ function fn_searchPage( array $pagesList, /*int*/ $needPage )
 }
 
 function fn_get_product_info_by_id_order( $order_id ) {
-    $arrayProductId = db_get_fields("SELECT product_id FROM ?:order_details WHERE order_id = ?i", $order_id);
+    $arrayProductId = db_get_fields( "SELECT product_id FROM ?:order_details WHERE order_id = ?i" , $order_id);
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $productId = db_get_field("SELECT order_id FROM ?:orders WHERE order_id = ?i and company_id = ?i" , $order_id, $company['company_id']);
+
+            if ( empty($productId) ) {
+                $productId = db_get_field("SELECT order_id FROM ?:orders WHERE parent_order_id = ?i and company_id = ?i" , $order_id, $company['company_id']);
+            }
+            $arrayProductId = db_get_fields( "SELECT product_id FROM ?:order_details WHERE order_id = ?i" , $productId);
+
+        }
+    }
+
     foreach ( $arrayProductId as $key => $item ) {
         $imageId = implode(db_get_fields("SELECT detailed_id FROM ?:images_links WHERE object_type='product' AND type='M' AND object_id =?i", $item));
 //        if ( is_null($imageId) ) {
@@ -382,8 +496,17 @@ function fn_get_product_description_by_id( $product_id ) {
 }
 
 function fn_get_product_info_by( $product_id ) {
+    $query = "SELECT *  FROM ?:products WHERE product_id = ?i";
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $query .= " and company_id = ". $company['company_id'];
+        }
+    }
+
     $arrayAnswer = [];
-    $products = db_get_row("SELECT *  FROM ?:products WHERE product_id = ?i", $product_id);
+    $products = db_get_row( $query , $product_id);
     if ( count($products) > 0 ) {
         $arrayAnswer['product_id'] = $product_id;
         $arrayAnswer['status_name'] = "".fn_get_status_name_by_code($products['status']);
@@ -470,10 +593,20 @@ function fn_get_one_images_product_by_id( $product_id ) {
 }
 
 function fn_get_product_list( $page, $limit, $name = '' ) {
+    $query = "SELECT * FROM ?:products, ?:product_descriptions WHERE ?:products.product_id = ?:product_descriptions.product_id";
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $query .= " and company_id = ". $company['company_id'];
+        }
+    }
+
     if ( isset($name) && !empty($name) ) {
-        $allProducts = db_get_array("SELECT * FROM ?:products, ?:product_descriptions WHERE ?:products.product_id = ?:product_descriptions.product_id AND product LIKE ?s LIMIT ?i,?i ", '%' . $name . '%', $page, $limit);
+        $allProducts = db_get_array( $query ." AND product LIKE ?s LIMIT ?i,?i ", '%' . $name . '%', $page, $limit);
     } else {
-        $allProducts = db_get_array("SELECT * FROM ?:products, ?:product_descriptions WHERE ?:products.product_id = ?:product_descriptions.product_id LIMIT ?i,?i ", $page, $limit);
+//        fn_print($limit);
+        $allProducts = db_get_array( $query ." LIMIT ?i,?i ", $page, $limit);
     }
     $arrayResonse = [];
     if ( count($allProducts) > 0 ) {
@@ -532,6 +665,7 @@ function fn_get_category_name_by_product_id( $productId ) {
 
 function fn_get_total_customers( $data = [] ) {
     if ( isset($data['filter']) && !empty($data['filter']) ) {
+
         switch ( $data['filter'] ) {
             case 'day':
                 $timestamp = time();
@@ -555,6 +689,20 @@ function fn_get_total_customers( $data = [] ) {
     } else {
         $users = implode(db_get_fields("SELECT count(*) FROM ?:users WHERE 1"));
     }
+
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $usersPurchases = db_get_fields("SELECT DISTINCT user_id FROM ?:orders WHERE company_id = ?i", $company['company_id']);
+            foreach ( $users as $key => $user ) {
+                if ( !in_array($user['user_id'] , $usersPurchases) ) {
+                    unset($users[$key]);
+                }
+            }
+        }
+    }
+
     return $users;
 }
 
@@ -583,6 +731,20 @@ function fn_get_total_orders( $data = [] ) {
     } else {
         $orders = implode(db_get_fields("SELECT count(*) FROM ?:orders WHERE 1"));
     }
+
+    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+            $usersPurchases = db_get_fields("SELECT DISTINCT order_id FROM ?:orders WHERE company_id = ?i", $company['company_id']);
+            foreach ( $orders as $key => $order ) {
+                if ( !in_array($order['order_id'] , $usersPurchases) ) {
+                    unset($orders[$key]);
+                }
+            }
+        }
+    }
+
     return $orders;
 }
 
@@ -672,6 +834,15 @@ function fn_get_orders_castom( $data = [] ) {
             $date_min = strtotime($data['filter']['date_max']);
             $query .= " AND timestamp < " . $date_min;
         }
+
+        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+            $userId = fn_get_user_id_by_token($_REQUEST['token']);
+            $company = fn_get_company_id_user_type_by_token($userId);
+            if ( $company['user_type'] != 'A' ) {
+                $query .= " AND company_id = " . $company['company_id'];
+            }
+        }
+
     } else {
         $query = "WHERE status <> 'D'";
     }
@@ -759,6 +930,13 @@ function fn_update_product_new( $data = [] ) {
     } else {
         if (!empty($dataProducts)) {
             $dataProducts['company_id'] = Registry::get('runtime.company_id');
+            if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+                $userId = fn_get_user_id_by_token($_REQUEST['token']);
+                $company = fn_get_company_id_user_type_by_token($userId);
+                if ( $company['user_type'] != 'A' ) {
+                    $dataProducts['company_id'] =  $company['company_id'];
+                }
+            }
             $productId = db_query("INSERT INTO ?:products ?e ", $dataProducts);
         }
     }
@@ -785,6 +963,7 @@ function fn_update_product_new( $data = [] ) {
     }
     if ( $data['product_id'] != '0' ) {
         if ( !empty($dataCategory['category_id']) ) {
+ 
             db_query("DELETE FROM ?:products_categories WHERE product_id = ?i", $data['product_id']);
             foreach ( $dataCategory['category_id'] as $key => $value ) {
                 $listCategories = [
@@ -804,11 +983,13 @@ function fn_update_product_new( $data = [] ) {
         $response['images']     = fn_get_array_images_product_by_id($data['product_id']);
         return $response;
     } else {
+
         if ( !empty($dataDescription) ) {
             $dataDescription['product_id'] = $productId;
             $dataDescription['lang_code'] = CART_LANGUAGE;
             db_query("INSERT INTO ?:product_descriptions ?e ", $dataDescription);
         }
+
         foreach ( $dataCategory['category_id'] as $key => $value ) {
             $listCategories = [
                 'product_id' => $productId,
@@ -1001,4 +1182,41 @@ function fn_get_category_list_root() {
 function fn_get_category_name_by_id( $categoryId ) {
     $name = db_get_fields("SELECT category FROM ?:category_descriptions WHERE category_id = ?i", $categoryId);
     return $name[0];
+}
+// -------------------------------- //
+
+function fn_get_user_id_by_token( $token ) {
+    return db_get_field("SELECT user_id FROM ?:users_module_admin WHERE token = ?s", $token);
+}
+
+
+function fn_get_company_id_user_type_by_token( $user_id ) {
+    return db_get_array("SELECT user_type, company_id FROM ?:users WHERE user_id = ?i", $user_id)[0];
+}
+
+function fn_delete_main_image( $response ) {
+    $answer = [];
+    if ( $response['image_id'] == '-1' ) {
+        $imageId = db_get_field("SELECT detailed_id FROM ?:images_links WHERE object_id = ?i AND type = 'M'", $response['product_id']);
+        $delete = db_query("DELETE FROM ?:images_links WHERE object_id = ?i AND type = 'M'", $response['product_id']);
+        $imagePath = db_get_field("SELECT image_path FROM ?:images WHERE image_id = ?i", $imageId);
+        $answer['product_id'] = $response['product_id'];
+        $answer['images'] = fn_get_array_images_product_by_id($response['product_id']);
+        unlink('images/detailed/1/'.$imagePath);
+    } else {
+        $delete = db_query("DELETE FROM ?:images_links WHERE object_id = ?i AND detailed_id = ?i", $response['product_id'], $response['image_id']);
+        $imagePath = db_get_field("SELECT image_path FROM ?:images WHERE image_id = ?i", $response['image_id']);
+        $mainImage = db_query("DELETE FROM ?:images WHERE image_id = ?i", $response['image_id']);
+        unlink('images/detailed/1/'.$imagePath);
+        $answer['product_id'] = $response['product_id'];
+        $answer['images'] = fn_get_array_images_product_by_id($response['product_id']);
+    }
+    return $answer;
+}
+
+function fn_print( $array ) {
+    echo "<pre>";
+    var_dump($array);
+    die;
+    echo "</pre>";
 }

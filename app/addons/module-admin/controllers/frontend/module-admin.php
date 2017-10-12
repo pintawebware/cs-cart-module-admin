@@ -73,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 fn_set_user_device($user_id, $response['device_token'], $response['os_type'] );
             }
         }
-        $token = fn_get_user_token($user_id)[0];
-        fn_answer( ['version' => $API_VERSION, 'response' => ['token' => $token], 'status' => true] );
+        $token = fn_get_user_token($user_id);
+        fn_answer( ['version' => $API_VERSION, 'response' => ['token' => implode($token)], 'status' => true] );
     }
 
     /**
@@ -202,28 +202,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($error !== null) {
             fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
         }
+
+        $query = "SELECT * FROM ?:orders WHERE user_id = ?i";
+        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+            $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
+            $company = fn_get_company_id_user_type_by_token( $userId );
+            if ( $company['user_type'] != 'A' )
+                $query .= " and company_id = " . $company['company_id'];
+        }
         if ( isset($response['client_id']) && !empty($response['client_id']) ) {
             $client_id = $response['client_id'];
             if ( isset($response['sort']) && !empty($response['sort']) ) {
                 switch ( $response['sort'] ) {
                     case 'total':
-                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY total DESC", $client_id);
+                        $clientOrders = db_get_array( $query ." ORDER BY total DESC", $client_id);
                         break;
                     case 'date_added' :
                         $sort = '';
-                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY timestamp DESC", $client_id);
+                        $clientOrders = db_get_array( $query ." ORDER BY timestamp DESC", $client_id);
                         break;
                     case 'completed'  :
-                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY FIELD(status,'c') DESC", $client_id);
+                        $clientOrders = db_get_array( $query ." ORDER BY FIELD(status,'c') DESC", $client_id);
                         break;
                     case 'cancelled'  :
-                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY FIELD(status,'d') DESC", $client_id, 'D');
+                        $clientOrders = db_get_array( $query ." ORDER BY FIELD(status,'d') DESC", $client_id, 'D');
                         break;
                     default :
-                        $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY timestamp DESC", $client_id);
+                        $clientOrders = db_get_array( $query ." ORDER BY timestamp DESC", $client_id);
                 }
             } else {
-                $clientOrders = db_get_array("SELECT * FROM ?:orders WHERE user_id = ?i ORDER BY timestamp DESC", $client_id);
+                $clientOrders = db_get_array($query . " ORDER BY timestamp DESC", $client_id );
             }
             $orders['orders'] = fn_get_client_orders( $clientOrders );
 
@@ -494,13 +502,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $order_id = $response['order_id'];
             $order = fn_get_order_by_id( $order_id );
             if ( count($order) > 0 ) {
+                $currentStatus = false;
                 if ( isset($response['address']) && !empty($response['address']) ) {
-                    fn_set_new_address_for_order_by_id($order_id, $response['address']);
+                    $currentStatus = fn_set_new_address_for_order_by_id($order_id, $response['address']);
                 }
                 if ( isset($response['city']) && !empty($response['city']) ) {
-                    fn_set_new_city_for_order_by_id($order_id, $response['city']);
+                    $currentStatus = fn_set_new_city_for_order_by_id($order_id, $response['city']);
                 }
-                fn_answer(['version' => $API_VERSION, 'status' => true]);
+                fn_answer(['version' => $API_VERSION, 'status' => $currentStatus]);
             } else {
                 fn_answer(['version' => $API_VERSION, 'error' => 'Can not change address', 'status' => false]);
             }
@@ -567,7 +576,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $response = $_REQUEST;
         $error = fn_check_token();
         if ($error !== null) {
-           fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
+            fn_answer(['version' => $API_VERSION, 'error' => $error, 'status' => false]);
         }
         if (isset($response['page']) && (int)$response['page'] != 0 && (int)$response['limit'] != 0 && isset($response['limit'])) {
             $page = $response['page'];
@@ -1228,6 +1237,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $page = 0;
             $limit = 20;
         }
+
+//        $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
+//        $companyId = fn_get_company_id_by_token( $userId );
+
         if ( isset($response['fio']) || isset($response['order_status_id']) || isset($response['min_price'])
             || isset($response['max_price']) || isset($response['date_min']) || isset($response['date_max']) ) {
             $filter = [];
@@ -1249,9 +1262,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ( isset($response['date_max']) && !empty($response['date_max']) ) {
                 $filter['date_max'] = $response['date_max'];
             }
-            $orders = fn_get_orders_castom(['filter' => $filter, 'page' => $page, 'limit' => $limit]);
+            $orders = fn_get_orders_castom(['filter' => $filter, 'page' => $page, 'limit' => $limit, 'companyId' => $companyId]);
         } else {
-            $orders = fn_get_orders_castom(['page' => $page, 'limit' => $limit]);
+            $orders = fn_get_orders_castom(['page' => $page, 'limit' => $limit, 'companyId' => $companyId ]);
         }
 
         $response = [];
@@ -1387,6 +1400,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($error !== null) {
             fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
         }
+        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' && isset($response['product_id']) && $response['product_id'] != 0 ) {
+            $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
+            $company = fn_get_company_id_user_type_by_token( $userId );
+            if ( $company['user_type'] != 'A' ) {
+                $ids = db_get_field("SELECT product_id FROM ?:products WHERE product_id = ?i and company_id = ".$company['company_id'] ,$response['product_id']);
+                if ( !empty($ids) ) {
+                    fn_answer(['version' => $API_VERSION_SECOND, 'response' => fn_update_product_new($response), 'status' => true]);
+                } else fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'You have not specified ID', 'status' => false]);
+            }
+        }
         if ( isset($response['product_id']) ) {
             fn_answer(['version' => $API_VERSION_SECOND, 'response' => fn_update_product_new($response), 'status' => true]);
         } else fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'You have not specified ID', 'status' => false]);
@@ -1487,15 +1510,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         if ( isset($response['image_id']) && !empty($response['image_id']) &&
             isset($response['product_id']) && !empty($response['product_id']) ) {
-            $data = [
-                'type' => 'A'
-            ];
-            $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND type = 'M'", $data, $response['product_id']);
-            $data = [
-                'type' => 'M'
-            ];
-            $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND detailed_id = ?i", $data, $response['product_id'], $response['image_id']);
-            fn_answer(['version' => $API_VERSION_SECOND, 'status' => true]);
+
+            if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' && isset($response['product_id']) && $response['product_id'] != 0 ) {
+                $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
+                $company = fn_get_company_id_user_type_by_token( $userId );
+                if ( $company['user_type'] != 'A' ) {
+                    $ids = db_get_field("SELECT product_id FROM ?:products WHERE product_id = ?i and company_id = ".$company['company_id'] ,$response['product_id']);
+                    if ( !empty($ids) ) {
+                        $data = [ 'type' => 'A' ];
+                        $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND type = 'M'", $data, $response['product_id']);
+                        $data = [ 'type' => 'M' ];
+                        $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND detailed_id = ?i", $data, $response['product_id'], $response['image_id']);
+                        fn_answer(['version' => $API_VERSION_SECOND, 'status' => true]);
+                    } else fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'You have not specified ID', 'status' => false]);
+                }
+            }
+
+            $productItems = fn_get_product_info_by( $response['product_id'] );
+            if ( $productItems !== '' ) {
+                $data = [  'type' => 'A'  ];
+                $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND type = 'M'", $data, $response['product_id']);
+                $data = [  'type' => 'M' ];
+                $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND detailed_id = ?i", $data, $response['product_id'], $response['image_id']);
+
+                fn_answer(['version' => $API_VERSION_SECOND, 'status' => true]);
+            } else {
+                fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'Can not found order with id = '.$response['product_id'], 'status' => false]);
+            }
+
         } else {
             fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'Not enough parameters', 'status' => false]);
         }
@@ -1539,22 +1581,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         if ( isset($response['image_id']) && !empty($response['image_id']) &&
             isset($response['product_id']) && !empty($response['product_id']) ) {
-            if ( $response['image_id'] == '-1' ) {
-                $imageId = db_get_field("SELECT detailed_id FROM ?:images_links WHERE object_id = ?i AND type = 'M'", $response['product_id']);
-                $delete = db_query("DELETE FROM ?:images_links WHERE object_id = ?i AND type = 'M'", $response['product_id']);
-                $imagePath = db_get_field("SELECT image_path FROM ?:images WHERE image_id = ?i", $imageId);
-                $answer['product_id'] = $response['product_id'];
-                $answer['images'] = fn_get_array_images_product_by_id($response['product_id']);
-                unlink('images/detailed/1/'.$imagePath);
-            } else {
-                $delete = db_query("DELETE FROM ?:images_links WHERE object_id = ?i AND detailed_id = ?i", $response['product_id'], $response['image_id']);
-                $imagePath = db_get_field("SELECT image_path FROM ?:images WHERE image_id = ?i", $response['image_id']);
-                $mainImage = db_query("DELETE FROM ?:images WHERE image_id = ?i", $response['image_id']);
-                unlink('images/detailed/1/'.$imagePath);
-                $answer['product_id'] = $response['product_id'];
-                $answer['images'] = fn_get_array_images_product_by_id($response['product_id']);
-            }
 
+            if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' && isset($response['product_id']) && $response['product_id'] != 0 ) {
+                $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
+                $company = fn_get_company_id_user_type_by_token( $userId );
+                if ( $company['user_type'] != 'A' ) {
+                    $ids = db_get_field("SELECT product_id FROM ?:products WHERE product_id = ?i and company_id = ".$company['company_id'] ,$response['product_id']);
+                    if ( !empty($ids) ) {
+                        fn_delete_main_image( $response );
+                    } else fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'You have not specified ID', 'status' => false]);
+                }
+            }
+            $answer = fn_delete_main_image( $response );
             fn_answer(['version' => $API_VERSION_SECOND, 'response' => $answer, 'status' => true]);
         } else {
             fn_answer(['version' => $API_VERSION_SECOND, 'error' => 'Not enough parameters', 'status' => false]);
