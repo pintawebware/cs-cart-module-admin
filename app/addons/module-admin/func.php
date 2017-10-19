@@ -372,11 +372,16 @@ function fn_get_clients( $data = [] ) {
             $company = fn_get_company_id_user_type_by_token($userId);
             if ( $company['user_type'] != 'A' ) {
                 $getIdUsers = db_get_fields( "SELECT DISTINCT(user_id) FROM ?:orders WHERE company_id = ?i", $company['company_id'] );
-                $query .= " WHERE user_id in (".implode(',', $getIdUsers).")";
+                if ( empty($getIdUsers) ) {
+                    return [];
+                } else $query .= " WHERE user_id in (".implode(',', $getIdUsers).")";
             }
         }
+
+
         $arrayUser[] = db_get_array( $query );
         $counter = 0;
+
         foreach (end($arrayUser) as $key => $item ) {
             $usersWithAllFields[$counter]['client_id'] = $item['user_id'];
             $usersWithAllFields[$counter]['fio'] = $item['firstname'] ." ". $item['lastname'];
@@ -384,6 +389,7 @@ function fn_get_clients( $data = [] ) {
             $usersWithAllFields[$counter]['quantity'] = fn_get_number_sales_orders($item['user_id']);
             $counter++;
         }
+
         switch ( $data['sort'] ) {
             case 'sum':
                 $usersWithAllFields = fn_sort_array_by_total($usersWithAllFields);
@@ -546,8 +552,8 @@ function fn_get_array_images_product_by_id( $product_id ) {
     $imagesIds = db_get_array("SELECT detailed_id, type FROM ?:images_links WHERE object_type='product' AND object_id =?i", $product_id);
     $imagesPaths = [];
     $imagesIds = fn_sort_array_by_type($imagesIds);
-    $counter = 0;
 
+    $counter = 0;
     foreach ( $imagesIds as $key => $item ) {
         if ( $item['type'] == 'M' ) {
             $path = fn_get_image($item['detailed_id'], 'detailed')['image_path'];
@@ -557,19 +563,21 @@ function fn_get_array_images_product_by_id( $product_id ) {
             unset($imagesIds[$key]);
         }
     }
-    if ( empty($imagesPaths) || is_null($imagesPaths) ) {
-        $imagesPaths[0]['image_id'] = '-1';
-        $imagesPaths[0]['image'] = '';
-        $counter++;
-    }
 
-    foreach ( $imagesIds as $item ) {
+//    if ( empty($imagesPaths) || is_null($imagesPaths) ) {
+//        $imagesPaths[0]['image_id'] = '-1';
+//        $imagesPaths[0]['image'] = '';
+//        $counter++;
+//    }
+
+    foreach ( $imagesIds as $key => $item ) {
         $path = fn_get_image($item['detailed_id'], 'detailed')['image_path'];
         $idImage = fn_get_image($item['detailed_id'], 'detailed')['image_id'];
         $imagesPaths[$counter]['image_id'] = $idImage;
         $imagesPaths[$counter]['image'] = $path;
         $counter++;
     }
+
     if ( empty($imagesPaths) || is_null($imagesPaths) ) {
         $imagesPaths[0]['image_id'] = '-1';
         $imagesPaths[0]['image'] = '';
@@ -914,7 +922,6 @@ function fn_update_product_new( $data = [] ) {
         else $status = 'A';
         $dataProducts['status'] = $status;
     }
-
     if ( isset($data['name']) && !empty($data['name']) ) {
         $dataDescription['product'] = $data['name'];
     }
@@ -924,7 +931,6 @@ function fn_update_product_new( $data = [] ) {
     if ( isset($data['categories']) && !empty($data['categories']) ) {
         $dataCategory['category_id'] = $data['categories'];
     }
-
     if ( $data['product_id'] != '0' ) {
         $productId = $data['product_id'];
     } else {
@@ -952,7 +958,7 @@ function fn_update_product_new( $data = [] ) {
                 $height = getimagesize($image)[1];
                 $nameImage = time().rand().$name;
                 fn_add_images_to_product($nameImage, $width, $height, $productId, 'A');
-                move_uploaded_file($image, 'images/detailed/1/' . basename($nameImage));
+                move_uploaded_file($image, 'images/detailed/2/' . basename($nameImage));
             }
             $count++;
         }
@@ -1014,6 +1020,7 @@ function fn_update_product_new( $data = [] ) {
                 'type' => 'M'
             ];
             $mainImage = db_query("UPDATE ?:images_links SET ?u WHERE object_id = ?i AND detailed_id = ?i", $data, $productId, $idMainImage);
+            if ( $mainImage == '1' )  $imagesList[0]['image_id'] = '-1';
         }
         $response['images']  = $imagesList;
         return $response;
