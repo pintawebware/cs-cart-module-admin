@@ -958,7 +958,8 @@ function fn_update_product_new( $data = [] ) {
                 $height = getimagesize($image)[1];
                 $nameImage = time().rand().$name;
                 fn_add_images_to_product($nameImage, $width, $height, $productId, 'A');
-                move_uploaded_file($image, 'images/detailed/2/' . basename($nameImage));
+                if ( fn_allowed_for('MULTIVENDOR') ) move_uploaded_file($image, 'images/detailed/2/' . basename($nameImage));
+                else move_uploaded_file($image, 'images/detailed/1/' . basename($nameImage));
             }
             $count++;
         }
