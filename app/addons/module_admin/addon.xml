@@ -6,7 +6,7 @@
     <default_language>ru</default_language>
     <status>active</status>
     <version>2.0</version>
-    <settings edition_type="ROOT,ULT:VENDOR">
+    <settings edition_type="ROOT,MULTIVENDOR">
         <sections>
             <section id="general">
                 <items>

@@ -57,7 +57,7 @@ function fn_get_all_tokens ( ) {
 
 function fn_get_client_info( $client_id ) {
     $response = [];
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
         $company = fn_get_company_id_user_type_by_token( $userId );
 
@@ -215,7 +215,7 @@ function fn_update_user_device_token( $old_token, $new_token ) {
 function fn_get_payment_and_shipping_by_id( $order_id ) {
 
     $query = "SELECT shipping_ids, payment_id, b_address, b_city, b_state, b_country  FROM ?:orders WHERE order_id = ?i";
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -252,7 +252,7 @@ function fn_get_shipping_method_by_id( $shippingId ) {
 
 function fn_get_order_by_id( $order_id ) {
     $query = "SELECT * FROM ?:orders WHERE order_id = ?i";
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -269,7 +269,7 @@ function fn_set_new_address_for_order_by_id( $order_id, $newAddress ) {
         's_address' => $newAddress
     ];
     $query = "UPDATE ?:orders SET ?u WHERE order_id = ?i";
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -286,7 +286,7 @@ function fn_set_new_city_for_order_by_id( $order_id, $newCity ) {
         's_city' => $newCity
     ];
     $query = "UPDATE ?:orders SET ?u WHERE order_id = ?i";
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -312,7 +312,7 @@ function fn_get_clients( $data = [] ) {
         }
 
         $query = "SELECT user_id, firstname, lastname FROM ?:users WHERE  ";
-        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
             $userId = fn_get_user_id_by_token($_REQUEST['token']);
             $company = fn_get_company_id_user_type_by_token($userId);
             if ( $company['user_type'] != 'A' ) {
@@ -367,7 +367,7 @@ function fn_get_clients( $data = [] ) {
 
     } else {
         $query = "SELECT user_id, firstname, lastname FROM ?:users";
-        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
             $userId = fn_get_user_id_by_token($_REQUEST['token']);
             $company = fn_get_company_id_user_type_by_token($userId);
             if ( $company['user_type'] != 'A' ) {
@@ -443,7 +443,7 @@ function fn_searchPage( array $pagesList, /*int*/ $needPage )
 
 function fn_get_product_info_by_id_order( $order_id ) {
     $arrayProductId = db_get_fields( "SELECT product_id FROM ?:order_details WHERE order_id = ?i" , $order_id);
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -503,7 +503,7 @@ function fn_get_product_description_by_id( $product_id ) {
 
 function fn_get_product_info_by( $product_id ) {
     $query = "SELECT *  FROM ?:products WHERE product_id = ?i";
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -602,7 +602,7 @@ function fn_get_one_images_product_by_id( $product_id ) {
 
 function fn_get_product_list( $page, $limit, $name = '' ) {
     $query = "SELECT * FROM ?:products, ?:product_descriptions WHERE ?:products.product_id = ?:product_descriptions.product_id";
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -698,7 +698,7 @@ function fn_get_total_customers( $data = [] ) {
         $users = implode(db_get_fields("SELECT count(*) FROM ?:users WHERE 1"));
     }
 
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -740,7 +740,7 @@ function fn_get_total_orders( $data = [] ) {
         $orders = implode(db_get_fields("SELECT count(*) FROM ?:orders WHERE 1"));
     }
 
-    if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
@@ -843,7 +843,7 @@ function fn_get_orders_castom( $data = [] ) {
             $query .= " AND timestamp < " . $date_min;
         }
 
-        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
             $userId = fn_get_user_id_by_token($_REQUEST['token']);
             $company = fn_get_company_id_user_type_by_token($userId);
             if ( $company['user_type'] != 'A' ) {
@@ -936,7 +936,7 @@ function fn_update_product_new( $data = [] ) {
     } else {
         if (!empty($dataProducts)) {
             $dataProducts['company_id'] = Registry::get('runtime.company_id');
-            if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+            if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
                 $userId = fn_get_user_id_by_token($_REQUEST['token']);
                 $company = fn_get_company_id_user_type_by_token($userId);
                 if ( $company['user_type'] != 'A' ) {
