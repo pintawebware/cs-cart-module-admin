@@ -854,7 +854,7 @@ function fn_get_orders_castom( $data = [] ) {
     } else {
         $query = "WHERE status <> 'D'";
     }
-    $query .= " LIMIT " . (int)$data['limit'] . " OFFSET " . (int)$data['page'];
+    $query .= "  ORDER BY order_id DESC LIMIT " . (int)$data['limit'] . " OFFSET " . (int)$data['page'];
     $listOrders = db_get_array("SELECT * FROM ?:orders ". $query);
     $sum = 0;
     $quantity = 0;
