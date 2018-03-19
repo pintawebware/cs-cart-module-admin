@@ -252,7 +252,7 @@ function fn_get_shipping_method_by_id( $shippingId ) {
 
 function fn_get_order_by_id( $order_id ) {
     $query = "SELECT * FROM ?:orders WHERE order_id = ?i";
-    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
+    if (( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' )) && isset($_REQUEST['token'])) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
