@@ -1228,3 +1228,39 @@ function fn_print( $array ) {
     die;
     echo "</pre>";
 }
+
+
+function get_productId_by_orderId( $orderId ) {
+    $response = array_shift(db_get_array("SELECT product_id FROM ?:order_details WHERE order_id = ?i", $orderId));
+    if ( isset($response['product_id']) ) {
+        return $response['product_id'];
+    } else return 0;
+}
+
+function fn_get_product_options_by_id( $productId ) {
+
+    $optionIds = db_get_fields( "SELECT * FROM ?:product_options WHERE product_id = ?i", $productId );
+
+    if ( count($optionIds) > 0) {
+        $optionNames = [];
+        foreach ( $optionIds as $key => $value ) {
+            $optionNames[$key]['optionId'] = $value;
+            $optionNames[$key]['name'] = db_get_field( "SELECT option_name FROM ?:product_options_descriptions WHERE option_id  = ?i", $value );
+        }
+
+        foreach ( $optionIds as $key => $value ) {
+            $oneVariant = db_get_fields( "SELECT * FROM ?:product_option_variants WHERE option_id = ?i", $value );
+            if ( count($oneVariant) > 0 ) {
+                foreach ( $oneVariant as $keyVar => $var ) {
+                    $varianName = array_shift(db_get_fields( "SELECT variant_name FROM ?:product_option_variants_descriptions WHERE variant_id = ?i", $var ));
+
+                    $optionNames[$key]['values'][$keyVar]['variant_id'] = $var;
+                    $optionNames[$key]['values'][$keyVar]['name'] = $varianName;
+                }
+            }
+        }
+
+        return $optionNames;
+    }
+    return '';
+}

@@ -1121,6 +1121,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $data['date_added'] = date("Y-m-d H:m:s", $orders['timestamp']);
                 $data['status'] = fn_get_name_order_status($orders['status']);
                 $data['statuses'] = fn_get_status_all_order();
+                $productId = get_productId_by_orderId($orderId);
+                $data['options'] = fn_get_product_options_by_id($productId);
                 fn_answer(['version' => $API_VERSION, 'response' => $data, 'status' => true]);
             } else {
                 fn_answer(['version' => $API_VERSION, 'error' => 'Can not found order with id = ' . $orderId, 'status' => false]);
