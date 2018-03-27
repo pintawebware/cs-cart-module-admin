@@ -151,7 +151,7 @@ function fn_get_name_order_status( $type_status ) {
         return '';
     } else {
         $statusId = fn_get_simple_statuses();
-        return $statusId[$type_status];
+        return isset($statusId[$type_status]) ? $statusId[$type_status] : null;
     }
 }
 

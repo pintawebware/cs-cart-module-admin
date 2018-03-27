@@ -1264,9 +1264,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ( isset($response['date_max']) && !empty($response['date_max']) ) {
                 $filter['date_max'] = $response['date_max'];
             }
-            $orders = fn_get_orders_castom(['filter' => $filter, 'page' => $page, 'limit' => $limit, 'companyId' => $companyId]);
+            $orders = fn_get_orders_castom(['filter' => $filter, 'page' => $page, 'limit' => $limit ]);
         } else {
-            $orders = fn_get_orders_castom(['page' => $page, 'limit' => $limit, 'companyId' => $companyId ]);
+            $orders = fn_get_orders_castom(['page' => $page, 'limit' => $limit ]);
         }
 
         $response = [];
@@ -1274,7 +1274,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         foreach ($orders as $order) {
 
-            if ($order['order_id'] !== null && isset($order['order_id'])) {
+            if ( isset($order['order_id']) && $order['order_id'] !== null ) {
                 $data['order_number'] = $order['order_id'];
                 $data['order_id'] = $order['order_id'];
                 $data['fio'] = $order['b_firstname'] . ' ' . $order['b_lastname'];
