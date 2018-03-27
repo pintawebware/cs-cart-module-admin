@@ -524,6 +524,7 @@ function fn_get_product_info_by( $product_id ) {
         $arrayAnswer['categories'] = fn_get_category_name_by_product_id_all( $product_id );
         $arrayAnswer['description'] = "".fn_get_product_description_by_id($product_id);
         $arrayAnswer['images'] = fn_get_array_images_product_by_id($product_id);
+        $arrayAnswer['options'] = fn_get_product_options_by_id($product_id);
     } else {
         $arrayAnswer = '';
     }
