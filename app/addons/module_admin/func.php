@@ -74,6 +74,7 @@ function fn_get_client_info( $client_id ) {
         $userInfo = fn_get_user_info( $client_id );
     }
     $response['client_id'] = $userInfo['user_id'];
+    $response['company_id'] = $userInfo['company_id'];
     $response['fio'] = $userInfo['firstname'];
     if ( !empty($userInfo['firstname']) && !is_null($userInfo['firstname']) ) {
         $response['fio'] = $userInfo['firstname'];
