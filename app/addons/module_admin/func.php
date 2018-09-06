@@ -703,13 +703,21 @@ function fn_get_total_customers( $data = [] ) {
     if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
+        if (!isset($data['filter']) || empty($data['filter']) ) {
+            $users = db_get_array("SELECT * FROM ?:users");
+        }
         if ( $company['user_type'] != 'A' ) {
             $usersPurchases = db_get_fields("SELECT DISTINCT user_id FROM ?:orders WHERE company_id = ?i", $company['company_id']);
-            foreach ( $users as $key => $user ) {
-                if ( !in_array($user['user_id'] , $usersPurchases) ) {
-                    unset($users[$key]);
+            if (!empty($orders) && is_array($orders)) {
+                foreach ( $users as $key => $user ) {
+                    if ( !in_array($user['user_id'] , $usersPurchases) ) {
+                        unset($users[$key]);
+                    }
                 }
             }
+        }
+        if (!isset($data['filter']) || empty($data['filter']) ) {
+            $users = (string)count($users);
         }
     }
 
@@ -747,9 +755,11 @@ function fn_get_total_orders( $data = [] ) {
         $company = fn_get_company_id_user_type_by_token($userId);
         if ( $company['user_type'] != 'A' ) {
             $usersPurchases = db_get_fields("SELECT DISTINCT order_id FROM ?:orders WHERE company_id = ?i", $company['company_id']);
-            foreach ( $orders as $key => $order ) {
-                if ( !in_array($order['order_id'] , $usersPurchases) ) {
-                    unset($orders[$key]);
+            if (!empty($orders) && is_array($orders)) {
+                foreach ( $orders as $key => $order ) {
+                    if ( !in_array($order['order_id'] , $usersPurchases) ) {
+                        unset($orders[$key]);
+                    }
                 }
             }
         }
@@ -759,11 +769,20 @@ function fn_get_total_orders( $data = [] ) {
 }
 
 function get_total_sales( $data = [] ) {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || 
+         ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
+        $userId = fn_get_user_id_by_token($_REQUEST['token']);
+        $company = fn_get_company_id_user_type_by_token($userId);
+        if ( $company['user_type'] != 'A' ) {
+          $filter = " AND company_id = " . $company['company_id'];
+        }
+    }
+    
     $total = 0;
-    $orders = db_get_array("SELECT * FROM ?:orders WHERE 1");
+    $orders = db_get_array("SELECT * FROM ?:orders WHERE 1" . $filter);
     if (!empty($data['this_year'])) {
         $date_y = strtotime(date('Y'.'-1'));
-        $orders = db_get_array("SELECT * FROM ?:orders WHERE timestamp >= ".$date_y);
+        $orders = db_get_array("SELECT * FROM ?:orders WHERE timestamp >= ".$date_y . $filter);
     }
     foreach ( $orders as $value ) {
         $total += $value['total'];
