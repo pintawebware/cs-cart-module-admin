@@ -158,7 +158,7 @@ function fn_get_name_order_status( $type_status ) {
 
 function fn_get_order_history( $order_id ){
     $order = [];
-    if (Registry::get('addons.module-admin.is_multivendor') == 'Y') {
+    if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
         $userId = fn_get_user_id_by_token($_REQUEST['token']);
         $company = fn_get_company_id_user_type_by_token($userId);
         if ($company['user_type'] == 'A' && $company['company_id'] == '0') {

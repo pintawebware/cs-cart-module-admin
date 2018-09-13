@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         $query = "SELECT * FROM ?:orders WHERE user_id = ?i";
-        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) {
+        if ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) {
             $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
             $company = fn_get_company_id_user_type_by_token( $userId );
             if ( $company['user_type'] != 'A' )
@@ -1402,7 +1402,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($error !== null) {
             fn_answer(['version' => $API_VERSION_SECOND, 'error' => $error, 'status' => false]);
         }
-        if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' && isset($response['product_id']) && $response['product_id'] != 0 ) {
+        if ( ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) && isset($response['product_id']) && $response['product_id'] != 0 ) {
             $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
             $company = fn_get_company_id_user_type_by_token( $userId );
             if ( $company['user_type'] != 'A' ) {
@@ -1513,7 +1513,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ( isset($response['image_id']) && !empty($response['image_id']) &&
             isset($response['product_id']) && !empty($response['product_id']) ) {
 
-            if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' && isset($response['product_id']) && $response['product_id'] != 0 ) {
+            if ( ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) && isset($response['product_id']) && $response['product_id'] != 0 ) {
                 $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
                 $company = fn_get_company_id_user_type_by_token( $userId );
                 if ( $company['user_type'] != 'A' ) {
@@ -1584,7 +1584,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ( isset($response['image_id']) && !empty($response['image_id']) &&
             isset($response['product_id']) && !empty($response['product_id']) ) {
 
-            if ( Registry::get('addons.module-admin.is_multivendor') == 'Y' && isset($response['product_id']) && $response['product_id'] != 0 ) {
+            if ( ( ( Registry::get('settings.module_admin.general.is_multivendor') == 'Y' ) || ( Registry::get('addons.module-admin.is_multivendor') == 'Y' ) ) && isset($response['product_id']) && $response['product_id'] != 0 ) {
                 $userId = fn_get_user_id_by_token( $_REQUEST['token'] );
                 $company = fn_get_company_id_user_type_by_token( $userId );
                 if ( $company['user_type'] != 'A' ) {
